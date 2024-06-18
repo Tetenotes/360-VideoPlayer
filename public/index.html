@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>360-Degree Video Streaming</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      margin: 0;
+      background-color: #f0f0f0;
+    }
+    .container {
+      display: flex;
+      flex-direction: row;
+      align-items: flex-start;
+      justify-content: space-around;
+      width: 100%;
+      margin-top: 20px;
+    }
+    .video-container {
+      flex: 2;
+      text-align: center;
+      position: relative;
+    }
+    .video-list {
+      flex: 1;
+      padding: 20px;
+      box-sizing: border-box;
+    }
+    video {
+      width: 100%;
+      height: auto;
+      max-height: 80vh;
+    }
+    .controls {
+      margin-top: 20px;
+      text-align: center;
+    }
+    .bookmark-list {
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+  <h1>360-Degree Video Streaming</h1>
+  
+  <div class="container">
+    <div class="video-container">
+      <video id="videoPlayer" controls>
+        Your browser does not support the video tag.
+      </video>
+      <div class="controls">
+        <button onclick="playPause()">Play/Pause</button>
+        <button onclick="muteUnmute()">Mute/Unmute</button>
+        <button onclick="toggleFullscreen()">Fullscreen</button>
+        <button onclick="togglePip()">Picture-in-Picture</button>
+        <input type="range" id="volumeSlider" min="0" max="1" step="0.1" value="1" onchange="updateVolume()">
+        <button onclick="bookmarkCurrentTime()">Bookmark</button>
+        <span id="errorMsg" style="color: red; display: none;">Error: Video cannot be played.</span>
+        <div class="bookmark-list">
+          <h2>Bookmarks</h2>
+          <ul id="bookmarkList"></ul>
+        </div>
+      </div>
+    </div>
+    <div class="video-list">
+      <h2>Video List</h2>
+      <select id="videoSelector" onchange="changeVideo()">
+       
+      </select>
+      <h2>Video Dimensions</h2>
+      <select id="dimensionSelector" onchange="changeDimensions()">
+        <option value="144">144p</option>
+        <option value="240">240p</option>
+        <option value="360">360p</option>
+        <option value="480">480p</option>
+        <option value="720">720p</option>
+        <option value="1080">1080p</option>
+      </select>
+      <h2>Playback Speed</h2>
+      <select id="speedSelector" onchange="changeSpeed()">
+        <option value="0.5">0.5x</option>
+        <option value="1" selected>1x (Normal)</option>
+        <option value="1.5">1.5x</option>
+        <option value="2">2x</option>
+      </select>
+    </div>
+  </div>
+
+  <script>
+    const video = document.getElementById('videoPlayer');
+    const videoSelector = document.getElementById('videoSelector');
+    const dimensionSelector = document.getElementById('dimensionSelector');
+    const speedSelector = document.getElementById('speedSelector');
+    const errorMsg = document.getElementById('errorMsg');
+    const volumeSlider = document.getElementById('volumeSlider');
+    const bookmarkList = document.getElementById('bookmarkList');
+
+    // Fetch video list from server
+    fetch('/video-list')
+      .then(response => response.json())
+      .then(data => {
+        data.forEach(videoFile => {
+          const option = document.createElement('option');
+          option.value = videoFile;
+          option.textContent = videoFile;
+          videoSelector.appendChild(option);
+        });
+        if (data.length > 0) {
+          video.src = data[0];
+        }
+      });
+
+    video.onerror = function() {
+      video.style.display = 'none';
+      errorMsg.style.display = 'block';
+    };
+
+    function playPause() {
+      if (video.paused) {
+        video.play();
+      } else {
+        video.pause();
+      }
+    }
+
+    function muteUnmute() {
+      video.muted = !video.muted;
+      volumeSlider.disabled = video.muted;
+    }
+
+    function updateVolume() {
+      video.volume = parseFloat(volumeSlider.value);
+    }
+
+    function changeVideo() {
+      const selectedVideo = videoSelector.value;
+      video.src = selectedVideo;
+      video.play();
+    }
+
+    function changeDimensions() {
+      const selectedDimensions = dimensionSelector.value;
+      switch (selectedDimensions) {
+        case '144':
+          video.style.width = '144px';
+          video.style.height = 'auto';
+          break;
+        case '240':
+          video.style.width = '240px';
+          video.style.height = 'auto';
+          break;
+        case '360':
+          video.style.width = '360px';
+          video.style.height = 'auto';
+          break;
+        case '480':
+          video.style.width = '480px';
+          video.style.height = 'auto';
+          break;
+        case '720':
+          video.style.width = '720px';
+          video.style.height = 'auto';
+          break;
+        case '1080':
+          video.style.width = '1080px';
+          video.style.height = 'auto';
+          break;
+        default:
+          break;
+      }
+    }
+
+    function changeSpeed() {
+      const speed = speedSelector.value;
+      video.playbackRate = speed;
+    }
+
+    function toggleFullscreen() {
+      if (!document.fullscreenElement) {
+        video.requestFullscreen().catch(err => {
+          alert(`Error attempting to enable fullscreen mode: ${err.message} (${err.name})`);
+        });
+      } else {
+        document.exitFullscreen();
+      }
+    }
+
+    async function togglePip() {
+      try {
+        if (video !== document.pictureInPictureElement) {
+          await video.requestPictureInPicture();
+        } else {
+          await document.exitPictureInPicture();
+        }
+      } catch (error) {
+        console.error(`Failed to toggle Picture-in-Picture mode: ${error}`);
+      }
+    }
+
+    function bookmarkCurrentTime() {
+      const currentTime = video.currentTime;
+      const listItem = document.createElement('li');
+      listItem.textContent = `Bookmark at ${currentTime.toFixed(2)} seconds`;
+      listItem.onclick = () => video.currentTime = currentTime;
+      bookmarkList.appendChild(listItem);
+    }
+  </script>
+</body>
+</html>
